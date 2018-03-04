@@ -30,9 +30,9 @@
 
             success: function (data) {
 
-                var json = "<h4>Ajax Response</h4>" + data;
+                var json = "<h4>Found "+data+" albums...</h4>";
 
-                $('#feedback').html(json);
+                myVar = setTimeout(pollForResults(), 500);
 
                 console.log("SUCCESS : ", data);
                 $("#btn-search").prop("disabled", false);
@@ -49,6 +49,15 @@
 
             }
         });
+    }
+
+    function pollForResults() {
+        $.ajax({url: "/ripper/poller", success: function(result){
+                console.log("Polled result: " + result);
+                $( "#feedback" ).append( result );
+            }});
+
+
     }
 </script>
 

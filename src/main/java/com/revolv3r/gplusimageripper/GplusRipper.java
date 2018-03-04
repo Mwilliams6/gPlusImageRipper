@@ -13,10 +13,8 @@ import java.util.concurrent.Future;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 
 import org.springframework.web.servlet.ModelAndView;
@@ -45,7 +43,7 @@ public class GplusRipper
 	 */
 	// Exercise using curl http://localhost:8080/async?input=<google_profile_id>
 	@RequestMapping(path = "initReq", method = RequestMethod.POST)
-	public void get(@RequestParam String input) {
+	public ResponseEntity<?> get(@RequestParam String input) {
 
 		//get album urls from profile
 		final List<String> albumUrls = mGplusService.retrieveAlbumsFromProfile(input);
@@ -56,6 +54,8 @@ public class GplusRipper
             albumUrls.stream()
                     .map(albumPath -> supplyAsync(() -> mGplusService.retrieveImages(albumPath)))
                     .collect(toList());
+
+    return ResponseEntity.ok(futureResults.size());
 	}
 
   /**

@@ -1,0 +1,12 @@
+#mainDiv{
+    width: 550px;
+    margin: 0 auto;
+
+
+}
+
+input#urlPath{
+    width: 250px;
+    display: flow;
+}
+

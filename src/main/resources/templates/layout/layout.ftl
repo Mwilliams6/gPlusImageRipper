@@ -22,6 +22,7 @@
     <script lang="text/javascript" src="${rc.contextPath}/js/custom.js"></script>
 <#--End additional scripts-->
 
+    <link href="https://fonts.googleapis.com/css?family=Mina|Oswald" rel="stylesheet">
 
 </head>
 <body>

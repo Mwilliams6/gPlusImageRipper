@@ -1,12 +1,28 @@
 #mainDiv{
-    width: 550px;
+  width: 550px;
+  margin: 0 auto;
+}
+
+body{
+  font-family: 'Mina', sans-serif;
+}
+
+#headerText{
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.8em;
+    width: 500px;
     margin: 0 auto;
-
-
+    text-align: center;
 }
 
 input#urlPath{
-    width: 250px;
-    display: flow;
+  width: 180px;
+    display: inline;
 }
 
+#urlForm{
+    width: 500px;
+    margin: 0 auto;
+    border: solid 1px #ccc;
+    padding: 15px;
+}

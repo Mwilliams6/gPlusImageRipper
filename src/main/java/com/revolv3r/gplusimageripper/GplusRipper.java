@@ -6,9 +6,13 @@ import static java.util.stream.Collectors.toList;
 import com.revolv3r.gplusimageripper.service.GplusService;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 
 import org.springframework.boot.SpringApplication;
@@ -29,7 +33,6 @@ public class GplusRipper
   private GplusService mGplusService;
 
 	private List<Future<?>> futureResults;
-
 	private Logger mLogger = LogManager.getLogger(GplusRipper.class);
 
 	@RequestMapping("/")
@@ -41,7 +44,7 @@ public class GplusRipper
 	 * Initiates the grab process
 	 * @param input the google profile ID
 	 */
-	// Exercise using curl http://localhost:8080/async?input=<google_profile_id>
+
 	@RequestMapping(path = "initReq", method = RequestMethod.POST)
 	public ResponseEntity<?> get(@RequestParam String input) {
 
@@ -65,27 +68,34 @@ public class GplusRipper
 	@RequestMapping(path = "poller", method = RequestMethod.GET)
 	public Future<String> poll(){
 
-		// Restructure as varargs because that's what CompletableFuture.allOf requires.
-		CompletableFuture<?>[] futuresAsVarArgs = futureResults
-						.toArray(new CompletableFuture<?>[futureResults.size()]);
-
-		// Create a new future that completes once once all of the previous futures complete.
-		CompletableFuture<?> jobsDone = CompletableFuture.anyOf(futuresAsVarArgs);
-
 		CompletableFuture<String> output = new CompletableFuture<>();
+    List<Future<?>> removeArray = new ArrayList<>();
+		StringBuilder stringBuilder = new StringBuilder();
+		try
+    {
+      for (Future<?> item : futureResults)
+			{
+			  if (item.isDone())
+				{
+					stringBuilder.append(item.get(10, TimeUnit.MILLISECONDS));
 
-		// Once all of the futures have completed, build out the result string from results.
-		jobsDone.thenAccept(ignored -> {
-			StringBuilder stringBuilder = new StringBuilder();
-			futureResults.forEach(f -> {
-				try {
-					stringBuilder.append(f.get());
-				} catch (Exception e) {
-					output.completeExceptionally(e);
+					removeArray.add(item);
 				}
-			});
+			}
+      if (futureResults.size()==0)
+      {
+        stringBuilder.append("<div style='display:none'>XX-FINISHED-XX</div>");
+      }
+			//remove completed
+      futureResults.removeAll(removeArray);
+
+      //return result
 			output.complete(stringBuilder.toString());
-		});
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
 
 		return output;
 	}

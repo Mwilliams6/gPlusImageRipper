@@ -2,7 +2,9 @@ package com.revolv3r.gplusimageripper.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -38,7 +40,6 @@ public class GplusServiceImpl implements GplusService {
   {
     try {
       passedValue = correctAlbumUrl(passedValue);
-      mLogger.info("Fetched album.. getting next");
       return getActualAlbumPage(passedValue);
     }catch (IOException e)
     {
@@ -47,18 +48,17 @@ public class GplusServiceImpl implements GplusService {
     return null;
   }
 
-//	private void validateInput(String url) throws IllegalArgumentException
-//	{
-//		if (url.isEmpty())
-//			throw new IllegalArgumentException("URL cannot be empty");
-//		if (!url.contains("https://get.google.com/u/0/albumarchive/"))
-//			throw  new IllegalArgumentException("URL must begin: https://get.google.com/u/0/albumarchive/...");
-//	}
-
   private List<String> getInitialAlbumPages(String aPath)
   {
     try{
-      return parseXmlPath(aPath);
+      List<String> results = parseXmlPath(aPath);
+
+      Set<String> hs = new HashSet<>();
+      hs.addAll(results);
+      results.clear();
+      results.addAll(hs);
+
+      return results;
     }
     catch (Exception e) {
       e.printStackTrace();
@@ -66,10 +66,9 @@ public class GplusServiceImpl implements GplusService {
     return null;
   }
 
-
   private List<String> parseXmlPath(String aUrl) throws Exception{
     List<String> albumList = new ArrayList<>();
-
+    Set<String> uniqueImageSet = new HashSet<>();
     Document doc = Jsoup.connect(aUrl).get();
 
     mLogger.info(doc.title());
@@ -79,10 +78,9 @@ public class GplusServiceImpl implements GplusService {
     mLogger.info(String.format("found %s images",
             matchingDivIds.size()));
 
-    for (Element headline : matchingDivIds) {
-      if (headline.toString().contains("albumid")){
-
-        albumList.add(headline.toString());
+    for (Element individualImagePath : matchingDivIds) {
+      if (individualImagePath.toString().contains("albumid") && !uniqueImageSet.contains(individualImagePath)){
+        albumList.add(individualImagePath.toString());
       }
     }
     return albumList;
@@ -108,11 +106,12 @@ public class GplusServiceImpl implements GplusService {
 
     Elements matchingDivIds = doc.select("img");
     mLogger.info(String.format("Returned %s images...",matchingDivIds.size()));
+    sb.append("<h1>"+ doc.title() +"</h1>");
     for (Element headline : matchingDivIds) {
 
       sb.append(headline.toString());
     }
-
+    sb.append("<br/>");
     return sb.toString();
   }
 }

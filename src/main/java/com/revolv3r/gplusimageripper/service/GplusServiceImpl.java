@@ -98,20 +98,59 @@ public class GplusServiceImpl implements GplusService {
 
   private String getActualAlbumPage(String aPath) throws IOException
   {
+    int i =0;
     StringBuilder sb = new StringBuilder();
 
     Document doc = Jsoup.connect(aPath).get();
-
+    String newStub = doc.location();
     mLogger.info("Title: " + doc.title());
 
     Elements matchingDivIds = doc.select("img");
+    Elements fullSizeImages = doc.select("div.XmeTyb");
     mLogger.info(String.format("Returned %s images...",matchingDivIds.size()));
     sb.append("<h1>"+ doc.title() +"</h1>");
-    for (Element headline : matchingDivIds) {
+    List<String> fullSizedImages = new ArrayList<>();
 
+    //String fullsizePath = fullSizeImages.get(0).toString();
+
+    for (Element e : fullSizeImages)
+    {
+      String uniqueImagePath = formatImagePath(e.toString());
+      String fullPathLarge = newStub + "/" + uniqueImagePath;
+
+      Document paged = Jsoup.connect(fullPathLarge).get();
+      Elements matchedFullSizes = paged.select("div.nKtIqb");
+      Elements paffs = matchedFullSizes.select("img");
+      for (Element single : paffs)
+      {
+        if (!fullSizedImages.contains(single.toString()))
+          fullSizedImages.add(single.toString());
+      }
+    }
+    mLogger.info(String.format("Found %s full size images, and %s thumbnails", fullSizedImages.size(), matchingDivIds.size()));
+    for (Element headline : matchingDivIds) {
+      String uniqueFileIdent = headline.toString().substring(46,56);
+      sb.append("<a class='lightbox' href='#"+uniqueFileIdent+"'>");
       sb.append(headline.toString());
+      sb.append("</a>");
+      sb.append("<div class='lightbox-target' id='"+uniqueFileIdent+"'>");
+      sb.append(fullSizedImages.get(i));
+      sb.append("<a class='lightbox-close' href='#'></a>");
+      sb.append("</div>");
+      i++;
     }
     sb.append("<br/>");
     return sb.toString();
+  }
+
+  private String formatImagePath(String fullsizePath) {
+    String returnStr;
+    Integer firstMarker = fullsizePath.indexOf("data-mk");
+    returnStr = fullsizePath.substring(firstMarker+9);
+
+    Integer secondMarker = returnStr.indexOf("jsdata");
+    returnStr = returnStr.substring(0, secondMarker-2);
+
+    return returnStr;
   }
 }

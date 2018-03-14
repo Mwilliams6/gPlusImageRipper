@@ -13,6 +13,8 @@
     <link rel="stylesheet" type="text/css" href="${rc.contextPath}/css/lib/dropzone.css">
 
     <link rel="stylesheet" type="text/css" href="${rc.contextPath}/css/custom.css"/>
+    <link rel="stylesheet" type="text/css" href="${rc.contextPath}/css/lightbox.css"/>
+
 
     <script lang="text/javascript" src="${rc.contextPath}/js/lib/jquery.js"></script>
     <script lang="text/javascript" src="${rc.contextPath}/js/lib/popper.js"></script>

@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class GplusServiceImpl implements GplusService {
 
+
   private static final String GOOGLE_PROFILE_BASE_URL = "http://photos.googleapis.com/data/feed/api/user/";
   private Logger mLogger = LogManager.getLogger(GplusServiceImpl.class);
 
@@ -108,7 +109,7 @@ public class GplusServiceImpl implements GplusService {
     Elements matchingDivIds = doc.select("img");
     Elements fullSizeImages = doc.select("div.XmeTyb");
     mLogger.info(String.format("Returned %s images...",matchingDivIds.size()));
-    sb.append("<h1>"+ doc.title() +"</h1>");
+    sb.append("<h4>"+ doc.title() +"</h4>");
     List<String> fullSizedImages = new ArrayList<>();
 
     //String fullsizePath = fullSizeImages.get(0).toString();

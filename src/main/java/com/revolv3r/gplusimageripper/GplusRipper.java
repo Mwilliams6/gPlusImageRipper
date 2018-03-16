@@ -29,6 +29,8 @@ import javax.annotation.Resource;
 @SpringBootApplication
 public class GplusRipper
 {
+	private double overallProgress=0,total = 0, currentPos=0;
+
   @Resource
   private GplusService mGplusService;
 
@@ -57,10 +59,23 @@ public class GplusRipper
             albumUrls.stream()
                     .map(albumPath -> supplyAsync(() -> mGplusService.retrieveImages(albumPath)))
                     .collect(toList());
-
+		total = futureResults.size();
     return ResponseEntity.ok(futureResults.size());
 	}
 
+	@RequestMapping(path = "getProgress", method = RequestMethod.GET)
+	public String updateStatus(){
+
+		currentPos = (overallProgress / total)*100;
+		return String.format("  <div class='progress'><div class='progress-bar' role='progressbar' style='width:%s%%'></div></div>", currentPos);
+	}
+
+	@RequestMapping(path = "cancel", method = RequestMethod.GET)
+	public void cancel(){
+
+		futureResults =null;
+		//return String.format("  <div class='progress'><div class='progress-bar' role='progressbar' style='width:%s%%'></div></div>", currentPos);
+	}
   /**
    * Poller to update the GUI with the future result outcomes, as/when
    * @return list of img paths successfully completed
@@ -73,24 +88,34 @@ public class GplusRipper
 		StringBuilder stringBuilder = new StringBuilder();
 		try
     {
-      for (Future<?> item : futureResults)
+    	if (futureResults!=null)
 			{
-			  if (item.isDone())
+				for (Future<?> item : futureResults)
 				{
-					stringBuilder.append(item.get(10, TimeUnit.MILLISECONDS));
+					if (item.isDone())
+					{
+						stringBuilder.append(item.get(10, TimeUnit.MILLISECONDS));
 
-					removeArray.add(item);
+						removeArray.add(item);
+						overallProgress++;
+					}
 				}
-			}
-      if (futureResults.size()==0)
-      {
-        stringBuilder.append("<div style='display:none'>XX-FINISHED-XX</div>");
-      }
-			//remove completed
-      futureResults.removeAll(removeArray);
+				if (futureResults.size()==0)
+				{
+					stringBuilder.append("<div style='display:none'>XX-FINISHED-XX</div>");
+				}
+				//remove completed
+				futureResults.removeAll(removeArray);
 
-      //return result
-			output.complete(stringBuilder.toString());
+
+				//return result
+				output.complete(stringBuilder.toString());
+			}
+			else
+			{
+				stringBuilder.append("<div style='display:none'>XX-FINISHED-XX</div>");
+			}
+
 		}
 		catch (Exception e)
 		{

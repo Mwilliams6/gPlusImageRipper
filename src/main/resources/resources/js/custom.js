@@ -1,9 +1,30 @@
 var myVar;
 $(document).ready(function () {
-    $("#search-form").submit(function (event) {
+    $("#bth-cancel").prop("disabled",true);
+
+    $('#bth-search').on('click', function(event) {
         //stop submit the form, we will post it manually.
         event.preventDefault();
         madeAjaxCall();
+        $("#bth-search").prop("disabled",true);
+        $("#bth-cancel").prop("disabled",false);
+        $("#feedback").html("");
+    });
+
+    $('#bth-cancel').on('click', function(event) {
+        //stop submit the form, we will post it manually.
+        event.preventDefault();
+        $("#bth-search").prop("disabled",false);
+        $("#bth-cancel").prop("disabled",true);
+        $( "#progressBarContainer" ).html("<div class='progress'><div class='progress-bar' role='progressbar' style='width:100%'></div></div>");
+        clearInterval(myVar);
+
+        $.ajax({url: "/ripper/cancel",
+            success: function(){
+                console.log("Cancelled");
+
+            }
+        });
     });
 });
 
@@ -46,10 +67,21 @@ function pollForResults() {
         success: function(result){
             console.log("Polled result: " + result);
             $( "#feedback" ).append( result );
+
             if (result.indexOf("XX-FINISHED-XX") !== -1)
             {
+                $("#bth-search").prop("disabled",false);
                 clearInterval(myVar);
+
             }
         }
     });
+
+    $.ajax({url: "/ripper/getProgress",
+        success: function(result){
+            console.log("Polled result: " + result);
+            $( "#progressBarContainer" ).html(result);
+        }
+    });
+
 }

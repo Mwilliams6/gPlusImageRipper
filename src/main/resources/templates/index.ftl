@@ -18,17 +18,16 @@
           <button type="submit" id="bth-search"
                     class="btn btn-primary btn-lg">Search
           </button>
+            <button type="submit" id="bth-cancel"
+                    class="btn btn-danger btn-lg btn-space">Cancel
+            </button>
        </form>
     </div>
-
-
 </div>
 
+<div id="progressBarContainer"></div>
 
-<div id="feedback" style="width:80%; margin: 0 auto;">
-
-
-</div>
+<div id="feedback"></div>
 
 </@Layout.mainLayout>
 

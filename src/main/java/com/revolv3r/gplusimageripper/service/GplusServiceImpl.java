@@ -6,8 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.revolv3r.gplusimageripper.util.CommonFunctions;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -16,15 +15,19 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class GplusServiceImpl implements GplusService {
-
-
+  private boolean cancelled = false;
   private static final String GOOGLE_PROFILE_BASE_URL = "http://photos.googleapis.com/data/feed/api/user/";
-  private Logger mLogger = LogManager.getLogger(GplusServiceImpl.class);
+  private static final String LIGHTBOX_DIV_START = "<a class='lightbox' href='#%s'>";
+  private static final String LIGHTBOX_DIV_END = "</a>";
+  private static final String LIGHTBOX_TARGET_DIV_START = "<div class='lightbox-target' id='%s'>";
+  private static final String LIGHTBOX_CLOSE_BTN = "<a class='lightbox-close' href='#!'>";
+  private static final String LIGHTBOX_TARGET_DIV_END = "</div>";
+  private static final String LINEBREAK = "<br/>";
 
   @Override
-  public List<String> retrieveAlbumsFromProfile(String userId)
+  public Set<String> retrieveAlbumsFromProfile(String userId)
   {
-    List<String> result = new ArrayList<>();
+    Set<String> result = new HashSet<>();
     try
     {
       return getInitialAlbumPages(GOOGLE_PROFILE_BASE_URL+userId);
@@ -39,27 +42,41 @@ public class GplusServiceImpl implements GplusService {
   @Override
   public String retrieveImages(String passedValue)
   {
-    try {
-      passedValue = correctAlbumUrl(passedValue);
-      return getActualAlbumPage(passedValue);
-    }catch (IOException e)
+    if (!cancelled)
     {
-      e.printStackTrace();
+      try {
+        return getActualAlbumPage(CommonFunctions.correctAlbumUrl(passedValue));
+      }catch (IOException e)
+      {
+        e.printStackTrace();
+      }
     }
+
     return null;
   }
 
-  private List<String> getInitialAlbumPages(String aPath)
+  /**
+   * Extract album paths from aPath
+   * @param aPath the profile URL
+   * @return a set of album path URLs
+   */
+  private Set<String> getInitialAlbumPages(String aPath)
   {
     try{
-      List<String> results = parseXmlPath(aPath);
+      Set<String> albumList = new HashSet<>();
+      Document doc = Jsoup.connect(aPath).get();
 
-      Set<String> hs = new HashSet<>();
-      hs.addAll(results);
-      results.clear();
-      results.addAll(hs);
+      Elements matchingDivIds = doc.select("id");
 
-      return results;
+      mLogger.info(String.format("Album: %s, found %s images",
+              doc.title(), matchingDivIds.size()));
+
+      for (Element individualImagePath : matchingDivIds) {
+        if (individualImagePath.toString().contains("albumid")){
+          albumList.add(individualImagePath.toString());
+        }
+      }
+      return albumList;
     }
     catch (Exception e) {
       e.printStackTrace();
@@ -67,91 +84,68 @@ public class GplusServiceImpl implements GplusService {
     return null;
   }
 
-  private List<String> parseXmlPath(String aUrl) throws Exception{
-    List<String> albumList = new ArrayList<>();
-    Set<String> uniqueImageSet = new HashSet<>();
-    Document doc = Jsoup.connect(aUrl).get();
-
-    mLogger.info(doc.title());
-
-    Elements matchingDivIds = doc.select("id");
-
-    mLogger.info(String.format("found %s images",
-            matchingDivIds.size()));
-
-    for (Element individualImagePath : matchingDivIds) {
-      if (individualImagePath.toString().contains("albumid") && !uniqueImageSet.contains(individualImagePath)){
-        albumList.add(individualImagePath.toString());
-      }
-    }
-    return albumList;
-  }
-
-  private String correctAlbumUrl(String album) {
-
-    String grabbedURl = album;
-
-    grabbedURl = grabbedURl.replace("albumid", "album");
-    grabbedURl = grabbedURl.substring(0, grabbedURl.length()-6);
-    grabbedURl = grabbedURl.substring(55, grabbedURl.length());
-    return "https://get.google.com/albumarchive/pwaf/" + grabbedURl;
-  }
-
-  private String getActualAlbumPage(String aPath) throws IOException
+  /**
+   * Retrieve concatenated images for an album URL
+   * @param aAlbumPath the album URL
+   * @return concatenated images from profile
+   * @throws IOException on error
+   */
+  private String getActualAlbumPage(String aAlbumPath) throws IOException
   {
     int i =0;
     StringBuilder sb = new StringBuilder();
 
-    Document doc = Jsoup.connect(aPath).get();
+    Document doc = Jsoup.connect(aAlbumPath).get();
     String newStub = doc.location();
-    mLogger.info("Title: " + doc.title());
+    mLogger.debug(String.format("Parsing Album Title: %s, from URL: %s", doc.title(), aAlbumPath));
 
-    Elements matchingDivIds = doc.select("img");
-    Elements fullSizeImages = doc.select("div.XmeTyb");
-    mLogger.info(String.format("Returned %s images...",matchingDivIds.size()));
-    sb.append("<h4>"+ doc.title() +"</h4>");
+    Elements thumbnailPaths = doc.select("img");
+    Elements fullsizePaths = doc.select("div.XmeTyb");
+
+    sb.append(String.format("<h4>%s</h4>", doc.title()));
     List<String> fullSizedImages = new ArrayList<>();
 
-    //String fullsizePath = fullSizeImages.get(0).toString();
-
-    for (Element e : fullSizeImages)
+    /* TODO: this for loop can probably be streamlined -
+     as duplicate paths are returned and dis-regarded, due to how the profile page is structured
+     (4 duplicates, 1 unique)  */
+    for (Element imagePath : fullsizePaths)
     {
-      String uniqueImagePath = formatImagePath(e.toString());
-      String fullPathLarge = newStub + "/" + uniqueImagePath;
+      String uniqueImagePath = CommonFunctions.formatImagePath(imagePath.toString());
 
-      Document paged = Jsoup.connect(fullPathLarge).get();
+      Document paged = Jsoup.connect(newStub + "/" + uniqueImagePath).get();
       Elements matchedFullSizes = paged.select("div.nKtIqb");
-      Elements paffs = matchedFullSizes.select("img");
-      for (Element single : paffs)
+      Elements isolatedImagePaths = matchedFullSizes.select("img");
+      for (Element single : isolatedImagePaths)
       {
         if (!fullSizedImages.contains(single.toString()))
           fullSizedImages.add(single.toString());
       }
     }
-    mLogger.info(String.format("Found %s full size images, and %s thumbnails", fullSizedImages.size(), matchingDivIds.size()));
-    for (Element headline : matchingDivIds) {
-      String uniqueFileIdent = headline.toString().substring(46,56);
-      sb.append("<a class='lightbox' href='#"+uniqueFileIdent+"'>");
-      sb.append(headline.toString());
-      sb.append("</a>");
-      sb.append("<div class='lightbox-target' id='"+uniqueFileIdent+"'>");
-      sb.append(fullSizedImages.get(i));
-      sb.append("<a class='lightbox-close' href='#'></a>");
-      sb.append("</div>");
+
+    mLogger.debug(String.format("Found %s thumbnails, and %s full sized images",
+            thumbnailPaths.size(), fullsizePaths.size()));
+
+    for (Element thumbImage : thumbnailPaths) {
+      String uniqueFileIdent = CommonFunctions.generateUniqueId(thumbImage.toString());
+      sb.append(String.format(LIGHTBOX_DIV_START, uniqueFileIdent));
+        sb.append(CommonFunctions.replaceAltTag(thumbImage.toString()));
+      sb.append(LIGHTBOX_DIV_END);
+      sb.append(String.format(LIGHTBOX_TARGET_DIV_START, uniqueFileIdent));
+        sb.append(CommonFunctions.replaceAltTag(fullSizedImages.get(i)));
+      sb.append(LIGHTBOX_CLOSE_BTN + LIGHTBOX_DIV_END);
+      sb.append(LIGHTBOX_TARGET_DIV_END);
       i++;
     }
-    sb.append("<br/>");
+    sb.append(LINEBREAK);
     return sb.toString();
   }
 
-  private String formatImagePath(String fullsizePath) {
-    String returnStr;
-    Integer firstMarker = fullsizePath.indexOf("data-mk");
-    returnStr = fullsizePath.substring(firstMarker+9);
-
-    Integer secondMarker = returnStr.indexOf("jsdata");
-    returnStr = returnStr.substring(0, secondMarker-2);
-
-    return returnStr;
+  /**
+   * Allow yet to be completed jobs be skipped
+   * @param aState cancellation state
+   */
+  public void setCancelled(boolean aState)
+  {
+    cancelled = aState;
   }
 }

@@ -33,6 +33,7 @@ input#urlPath{
     margin: 0 auto;
     padding: 32px;
     border: 1px solid #ccc;
+    display: none;
 }
 
 #progressBarContainer{

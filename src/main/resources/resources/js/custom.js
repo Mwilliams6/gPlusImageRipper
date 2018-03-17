@@ -5,7 +5,7 @@ $(document).ready(function () {
     $('#bth-search').on('click', function(event) {
         //stop submit the form, we will post it manually.
         event.preventDefault();
-        madeAjaxCall();
+        initiateRetrieval();
         $("#bth-search").prop("disabled",true);
         $("#bth-cancel").prop("disabled",false);
         $("#feedback").html("");
@@ -28,7 +28,7 @@ $(document).ready(function () {
     });
 });
 
-function madeAjaxCall(){
+function initiateRetrieval(){
     $("#btn-search").prop("disabled", true);
 
     $.ajax({
@@ -40,14 +40,14 @@ function madeAjaxCall(){
 
         success: function (data) {
 
-            var json = "<h4>Found "+data+" albums...</h4>";
+            var json = "<h4>Found "+data+" albums...</h4><br/>";
             $( "#feedback" ).append( json );
             pollForResults();
             myVar = window.setInterval(pollForResults, 2000);
 
             console.log("SUCCESS : ", data);
             $("#btn-search").prop("disabled", false);
-
+            $("#feedback").show();
         },
         error: function (e) {
 
@@ -70,9 +70,9 @@ function pollForResults() {
 
             if (result.indexOf("XX-FINISHED-XX") !== -1)
             {
+                $("#bth-cancel").prop("disabled",true);
                 $("#bth-search").prop("disabled",false);
                 clearInterval(myVar);
-
             }
         }
     });

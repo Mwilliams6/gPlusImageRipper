@@ -4,6 +4,7 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.stream.Collectors.toList;
 
 import com.revolv3r.gplusimageripper.service.GplusService;
+import com.revolv3r.gplusimageripper.util.CommonFunctions;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
@@ -17,6 +18,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,10 +29,9 @@ import javax.annotation.Resource;
 
 @RestController
 @SpringBootApplication
-public class GplusRipper
+public class GplusRipper extends SpringBootServletInitializer
 {
-	private double overallProgress=0,total = 0, currentPos=0;
-  private final static String PROGRESS_BAR = "<div class='progress'><div class='progress-bar' role='progressbar' style='width:%s%%'></div></div>";
+	private double overallProgress=0,total=0,currentPos=0;
 
   @Resource
   private GplusService mGplusService;
@@ -77,7 +79,7 @@ public class GplusRipper
 	@RequestMapping(path = "getProgress", method = RequestMethod.GET)
 	public String updateStatus(){
 		currentPos = (overallProgress / total)*100;
-		return String.format(PROGRESS_BAR, currentPos);
+		return String.format(CommonFunctions.PROGRESS_BAR, currentPos);
 	}
 
 	/**
@@ -145,4 +147,15 @@ public class GplusRipper
 	public static void main(String[] args) {
 		SpringApplication.run(GplusRipper.class, args);
 	}
+
+  /**
+   * configurator for external deployment
+   * @param application
+   * @return
+   */
+  @Override
+  protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+    return application.sources(GplusRipper.class);
+  }
+
 }

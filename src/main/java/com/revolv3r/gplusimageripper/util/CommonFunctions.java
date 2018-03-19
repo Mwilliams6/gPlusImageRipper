@@ -2,6 +2,7 @@ package com.revolv3r.gplusimageripper.util;
 
 public class CommonFunctions {
   private static final String ALBUM_ARCHIVE_BASE_URL = "https://get.google.com/albumarchive/pwaf/";
+  public final static String PROGRESS_BAR = "<div class='progress'><div class='progress-bar' role='progressbar' style='width:%s%%'></div></div>";
 
   public static String correctAlbumUrl(String album)
   {

@@ -1,17 +1,25 @@
 package com.revolv3r.gplusimageripper.service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+import com.revolv3r.gplusimageripper.domain.ImageData;
+import com.revolv3r.gplusimageripper.service.interfaces.GplusService;
 import com.revolv3r.gplusimageripper.util.CommonFunctions;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
+
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 
 @Service
 public class GplusServiceImpl implements GplusService {
@@ -23,6 +31,30 @@ public class GplusServiceImpl implements GplusService {
   private static final String LIGHTBOX_CLOSE_BTN = "<a class='lightbox-close' href='#!'>";
   private static final String LIGHTBOX_TARGET_DIV_END = "</div>";
   private static final String LINEBREAK = "<br/>";
+
+  private FileOutputStream fos;
+
+
+  public GplusServiceImpl() {
+    fos = null;
+  }
+
+  private ZipOutputStream getZos()
+  {
+    if (fos == null)
+    {
+      try
+      {
+        fos = new FileOutputStream("hello-world.zip");
+      }
+      catch (FileNotFoundException fNfe)
+      {
+        //TODO: do something miraculous
+      }
+    }
+    BufferedOutputStream bos = new BufferedOutputStream(fos);
+    return new ZipOutputStream(bos);
+  }
 
   @Override
   public Set<String> retrieveAlbumsFromProfile(String userId)
@@ -84,6 +116,11 @@ public class GplusServiceImpl implements GplusService {
     return null;
   }
 
+  private void makeZippableContent()
+  {
+
+  }
+
   /**
    * Retrieve concatenated images for an album URL
    * @param aAlbumPath the album URL
@@ -103,10 +140,10 @@ public class GplusServiceImpl implements GplusService {
     Elements fullsizePaths = doc.select("div.XmeTyb");
 
     sb.append(String.format("<h4>%s</h4>", doc.title()));
-    List<String> fullSizedImages = new ArrayList<>();
+    ImageData fullSizedImages = new ImageData();
 
-    /* TODO: this for loop can probably be streamlined -
-     as duplicate paths are returned and dis-regarded, due to how the profile page is structured
+    /* TODO: this for loop can probably be streamlined, but exacly how, escapes me for now -
+     as duplicate paths are returned and thrown away, due to how a profile page is structured
      (4 duplicates, 1 unique)  */
     for (Element imagePath : fullsizePaths)
     {
@@ -117,8 +154,12 @@ public class GplusServiceImpl implements GplusService {
       Elements isolatedImagePaths = matchedFullSizes.select("img");
       for (Element single : isolatedImagePaths)
       {
-        if (!fullSizedImages.contains(single.toString()))
-          fullSizedImages.add(single.toString());
+        String fullsizedPath = single.absUrl("src");
+        if (!fullSizedImages.doesContainPath(fullsizedPath))
+        {
+          fullSizedImages.setFullSizePath(fullsizedPath);
+          fullSizedImages.setFullSizeWithContainingDiv(single.toString());
+        }
       }
     }
 
@@ -126,18 +167,82 @@ public class GplusServiceImpl implements GplusService {
             thumbnailPaths.size(), fullsizePaths.size()));
 
     for (Element thumbImage : thumbnailPaths) {
+      String thumbImageWithContainerDiv = CommonFunctions.replaceAltTag(thumbImage.toString());
+      String thumbImagePath = thumbImage.absUrl("src");
       String uniqueFileIdent = CommonFunctions.generateUniqueId(thumbImage.toString());
       sb.append(String.format(LIGHTBOX_DIV_START, uniqueFileIdent));
-        sb.append(CommonFunctions.replaceAltTag(thumbImage.toString()));
+        sb.append(thumbImageWithContainerDiv);
       sb.append(LIGHTBOX_DIV_END);
       sb.append(String.format(LIGHTBOX_TARGET_DIV_START, uniqueFileIdent));
-        sb.append(CommonFunctions.replaceAltTag(fullSizedImages.get(i)));
+        sb.append(CommonFunctions.replaceAltTag(fullSizedImages.getFullSizeWithContainingDiv().get(i)));
       sb.append(LIGHTBOX_CLOSE_BTN + LIGHTBOX_DIV_END);
       sb.append(LIGHTBOX_TARGET_DIV_END);
+
+      buildResourceWithUrls(
+              thumbImagePath,
+              fullSizedImages.getFullSizePath().get(i));
+
       i++;
     }
     sb.append(LINEBREAK);
     return sb.toString();
+  }
+
+  private void buildResourceWithUrls(String aThumb, String aFullSized)
+  {
+    InputStream thumbnail=null, fullsize=null;
+    try
+    {
+      thumbnail = new URL(""+aThumb).openStream();
+      fullsize = new URL(""+aFullSized).openStream();
+
+      addResourcesToReturnObject(thumbnail, fullsize);
+    }
+    catch (MalformedURLException mE)
+    {
+      //TODO: do something
+    }catch (IOException iE)
+    {
+      //TODO: do something else
+    }
+    finally
+    {
+      try
+      {
+        if (thumbnail!=null)
+          thumbnail.close();
+
+        if (fullsize!=null)
+          fullsize.close();
+      }
+      catch (IOException ie)
+      {
+        //TODO: do special stuffs
+      }
+    }
+  }
+
+  private void addResourcesToReturnObject(InputStream aThumbnail, InputStream aFullsize) {
+    BufferedInputStream thumbIs = new BufferedInputStream(aThumbnail);
+    BufferedInputStream fullsizeIs = new BufferedInputStream(aFullsize);
+
+    try
+    {
+      BufferedImage thumbnailImage = ImageIO.read(thumbIs);
+      BufferedImage fullsizeImage = ImageIO.read(fullsizeIs);
+
+      ImageReader reader = (ImageReader) thumbnailImage.getProperty();
+
+      getZos().putNextEntry(new ZipEntry("/thumbs/" + i +".png"));
+      getZos().write(thumbnailImage.);
+      // not available on BufferedOutputStream
+      getZos().closeEntry();
+    }
+    catch (IOException e)
+    {
+      //TODO: do something
+    }
+
   }
 
   /**

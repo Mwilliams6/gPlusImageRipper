@@ -32,9 +32,8 @@ function initiateRetrieval(){
     $("#btn-search").prop("disabled", true);
 
     $.ajax({
-        type: "post",
+        type: "get",
         url: "/ripper/initReq?input="+ $("#urlPath").val(),
-        dataType: 'json',
         cache: false,
         timeout: 600000,
 
@@ -63,9 +62,12 @@ function initiateRetrieval(){
 }
 
 function pollForResults() {
-    $.ajax({url: "/ripper/poller",
+    $.ajax({
+        type: "get",
+        url: "/ripper/poller",
+        cache: false,
         success: function(result){
-            console.log("Polled result: " + result);
+
             $( "#feedback" ).append( result );
 
             if (result.indexOf("XX-FINISHED-XX") !== -1)
@@ -77,9 +79,12 @@ function pollForResults() {
         }
     });
 
-    $.ajax({url: "/ripper/getProgress",
+    $.ajax({
+        type: "get",
+        url: "/ripper/getProgress",
+        cache: false,
         success: function(result){
-            console.log("Polled result: " + result);
+
             $( "#progressBarContainer" ).html(result);
         }
     });

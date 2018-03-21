@@ -3,7 +3,7 @@ package com.revolv3r.gplusimageripper;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.stream.Collectors.toList;
 
-import com.revolv3r.gplusimageripper.service.GplusService;
+import com.revolv3r.gplusimageripper.service.interfaces.GplusService;
 import com.revolv3r.gplusimageripper.util.CommonFunctions;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -49,7 +48,7 @@ public class GplusRipper extends SpringBootServletInitializer
 	 * Initiates the grab process
 	 * @param input the google profile ID
 	 */
-	@RequestMapping(path = "initReq", method = RequestMethod.POST)
+	@RequestMapping(path = "initReq", method = RequestMethod.GET)
 	public ResponseEntity<?> get(@RequestParam String input) {
 		resetCounters();
 		//get album urls from profile
@@ -148,14 +147,14 @@ public class GplusRipper extends SpringBootServletInitializer
 		SpringApplication.run(GplusRipper.class, args);
 	}
 
-  /**
-   * configurator for external deployment
-   * @param application
-   * @return
-   */
-  @Override
-  protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
-    return application.sources(GplusRipper.class);
-  }
+//  /**
+//   * configurator for external deployment
+//   * @param application
+//   * @return
+//   */
+//  @Override
+//  protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+//    return application.sources(GplusRipper.class);
+//  }
 
 }

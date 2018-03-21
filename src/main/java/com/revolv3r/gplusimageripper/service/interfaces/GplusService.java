@@ -1,4 +1,4 @@
-package com.revolv3r.gplusimageripper.service;
+package com.revolv3r.gplusimageripper.service.interfaces;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

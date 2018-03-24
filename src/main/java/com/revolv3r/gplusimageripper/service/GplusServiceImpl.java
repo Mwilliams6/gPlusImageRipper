@@ -180,7 +180,8 @@ public class GplusServiceImpl implements GplusService {
 
       buildResourceWithUrls(
               thumbImagePath,
-              fullSizedImages.getFullSizePath().get(i));
+              fullSizedImages.getFullSizePath().get(i),
+              uniqueFileIdent);
 
       i++;
     }
@@ -188,7 +189,7 @@ public class GplusServiceImpl implements GplusService {
     return sb.toString();
   }
 
-  private void buildResourceWithUrls(String aThumb, String aFullSized)
+  private void buildResourceWithUrls(String aThumb, String aFullSized, String aCleansedFilename)
   {
     InputStream thumbnail=null, fullsize=null;
     try
@@ -196,7 +197,7 @@ public class GplusServiceImpl implements GplusService {
       thumbnail = new URL(""+aThumb).openStream();
       fullsize = new URL(""+aFullSized).openStream();
 
-      addResourcesToReturnObject(thumbnail, fullsize);
+      addResourcesToReturnObject(thumbnail, fullsize, aCleansedFilename);
     }
     catch (MalformedURLException mE)
     {
@@ -222,25 +223,38 @@ public class GplusServiceImpl implements GplusService {
     }
   }
 
-  private void addResourcesToReturnObject(InputStream aThumbnail, InputStream aFullsize) {
+  private void addResourcesToReturnObject(InputStream aThumbnail, InputStream aFullsize, String aFilename) {
     BufferedInputStream thumbIs = new BufferedInputStream(aThumbnail);
     BufferedInputStream fullsizeIs = new BufferedInputStream(aFullsize);
 
+    //byte[] buf = new byte[1024];
     try
     {
       BufferedImage thumbnailImage = ImageIO.read(thumbIs);
       BufferedImage fullsizeImage = ImageIO.read(fullsizeIs);
 
-      ImageReader reader = (ImageReader) thumbnailImage.getProperty();
+      //FileOutputStream outputStream = new FileOutputStream("output.zip");
+      ZipOutputStream zipOutputStream = new ZipOutputStream(getZos());
+      ZipEntry imageZipThumbOutput = new ZipEntry("/album"+aFilename+"/thumbs/" + aFilename + ".png");
+      ZipEntry imageZipFullOutput = new ZipEntry("/album"+aFilename+"/" + aFilename + "_full.png");
 
-      getZos().putNextEntry(new ZipEntry("/thumbs/" + i +".png"));
-      getZos().write(thumbnailImage.);
-      // not available on BufferedOutputStream
-      getZos().closeEntry();
+      zipOutputStream.putNextEntry(imageZipThumbOutput);
+      ImageIO.write(thumbnailImage,imageZipThumbOutput.getName(), getZos());
+
+      zipOutputStream.putNextEntry(imageZipFullOutput);
+      ImageIO.write(fullsizeImage,imageZipFullOutput.getName(), getZos());
+//      }
+
+      thumbIs.close();
+      zipOutputStream.closeEntry();
+
+      zipOutputStream.close();
+
     }
     catch (IOException e)
     {
       //TODO: do something
+      e.printStackTrace();
     }
 
   }

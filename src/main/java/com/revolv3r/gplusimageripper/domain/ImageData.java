@@ -7,6 +7,11 @@ public class ImageData {
   private List<String> mFullSizePath = new ArrayList<>();
   private List<String> mFullSizeWithContainingDiv = new ArrayList<>();
 
+  public ImageData()
+  {
+
+  }
+
   public ImageData(String aFullSizeWithContainingDiv, String aFullSizePath) {
     mFullSizePath.add(aFullSizePath);
     mFullSizeWithContainingDiv.add(aFullSizeWithContainingDiv);

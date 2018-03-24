@@ -8,7 +8,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>war</packaging>
 
-	<name>gplusimageripper</name>
+	<name>ripper</name>
 	<description>Ripper of images from gplus profiles (picassa)</description>
 
 	<parent>

@@ -17,12 +17,13 @@ import org.springframework.stereotype.Service;
 public class GplusServiceImpl implements GplusService {
   private boolean cancelled = false;
   private static final String GOOGLE_PROFILE_BASE_URL = "http://photos.googleapis.com/data/feed/api/user/";
-  private static final String LIGHTBOX_DIV_START = "<a class='lightbox' href='#%s'>";
+  private static final String LIGHTBOX_DIV_START = "<a class='lightbox' href='%s'>";
   private static final String LIGHTBOX_DIV_END = "</a>";
   private static final String LIGHTBOX_TARGET_DIV_START = "<div class='lightbox-target' id='%s'>";
   private static final String LIGHTBOX_CLOSE_BTN = "<a class='lightbox-close' href='#!'>";
   private static final String LIGHTBOX_TARGET_DIV_END = "</div>";
   private static final String LINEBREAK = "<br/>";
+
 
   @Override
   public Set<String> retrieveAlbumsFromProfile(String userId)
@@ -96,44 +97,73 @@ public class GplusServiceImpl implements GplusService {
     StringBuilder sb = new StringBuilder();
 
     Document doc = Jsoup.connect(aAlbumPath).get();
-    String newStub = doc.location();
+    //String newStub = doc.location();
     mLogger.debug(String.format("Parsing Album Title: %s, from URL: %s", doc.title(), aAlbumPath));
 
     Elements thumbnailPaths = doc.select("img");
+
+    //get page containing full sized
     Elements fullsizePaths = doc.select("div.XmeTyb");
 
-    sb.append(String.format("<h4>%s</h4>", doc.title()));
-    List<String> fullSizedImages = new ArrayList<>();
+    List<String> foundFullSizes = new ArrayList<>();
 
-    /* TODO: this for loop can probably be streamlined -
-     as duplicate paths are returned and dis-regarded, due to how the profile page is structured
-     (4 duplicates, 1 unique)  */
-    for (Element imagePath : fullsizePaths)
+    for (Element e : fullsizePaths)
     {
-      String uniqueImagePath = CommonFunctions.formatImagePath(imagePath.toString());
+      String found = e.attr("data-mk"); //fullsize url
 
-      Document paged = Jsoup.connect(newStub + "/" + uniqueImagePath).get();
-      Elements matchedFullSizes = paged.select("div.nKtIqb");
-      Elements isolatedImagePaths = matchedFullSizes.select("img");
-      for (Element single : isolatedImagePaths)
+      Document fullSizePaged = Jsoup.connect(doc.location()+"/"+found).get();
+
+      Elements largeImagePage = fullSizePaged.select("div.ZRciZe");
+
+      for (Element e1 : largeImagePage)
       {
-        if (!fullSizedImages.contains(single.toString()))
-          fullSizedImages.add(single.toString());
+        Elements pageImageDivs = largeImagePage.select("div.nKtIqb");
+
+        for (Element e4 : pageImageDivs)
+        {
+          //check for video
+          if(e4.toString().contains("Start video"))
+          {
+            //go digging for url
+            String videoUrl = e4.attr("data-dlu");
+
+            if(!foundFullSizes.contains(videoUrl))
+              foundFullSizes.add(videoUrl);
+          }
+          else
+          {
+            String imageValue = e4.select("img").get(0).toString();//first img in div
+            if(!foundFullSizes.contains(imageValue))
+              foundFullSizes.add(imageValue);
+
+            mLogger.info("done image grabs");
+          }
+        }
       }
     }
 
-    mLogger.debug(String.format("Found %s thumbnails, and %s full sized images",
-            thumbnailPaths.size(), fullsizePaths.size()));
+    //draw results
+    sb.append(String.format("<h4>%s</h4>", doc.title()));
 
     for (Element thumbImage : thumbnailPaths) {
       String uniqueFileIdent = CommonFunctions.generateUniqueId(thumbImage.toString());
-      sb.append(String.format(LIGHTBOX_DIV_START, uniqueFileIdent));
-        sb.append(CommonFunctions.replaceAltTag(thumbImage.toString()));
-      sb.append(LIGHTBOX_DIV_END);
-      sb.append(String.format(LIGHTBOX_TARGET_DIV_START, uniqueFileIdent));
-        sb.append(CommonFunctions.replaceAltTag(fullSizedImages.get(i)));
-      sb.append(LIGHTBOX_CLOSE_BTN + LIGHTBOX_DIV_END);
-      sb.append(LIGHTBOX_TARGET_DIV_END);
+      if(foundFullSizes.get(i).startsWith("http"))
+      {
+        sb.append(String.format(LIGHTBOX_DIV_START, foundFullSizes.get(i)));
+          sb.append(CommonFunctions.replaceAltTag(thumbImage.toString()));
+        sb.append(LIGHTBOX_DIV_END);
+      }
+      else
+      {
+        sb.append(String.format(LIGHTBOX_DIV_START, "#"+uniqueFileIdent));
+          sb.append(CommonFunctions.replaceAltTag(thumbImage.toString()));
+        sb.append(LIGHTBOX_DIV_END);
+        sb.append(String.format(LIGHTBOX_TARGET_DIV_START, uniqueFileIdent));
+        sb.append(CommonFunctions.replaceAltTag(foundFullSizes.get(i)));
+        sb.append(LIGHTBOX_CLOSE_BTN + LIGHTBOX_DIV_END);
+        sb.append(LIGHTBOX_TARGET_DIV_END);
+      }
+
       i++;
     }
     sb.append(LINEBREAK);

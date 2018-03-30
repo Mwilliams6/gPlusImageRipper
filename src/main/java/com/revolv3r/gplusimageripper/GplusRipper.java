@@ -148,14 +148,14 @@ public class GplusRipper extends SpringBootServletInitializer
 		SpringApplication.run(GplusRipper.class, args);
 	}
 
-  /**
-   * configurator for external deployment
-   * @param application
-   * @return
-   */
-  @Override
-  protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
-    return application.sources(GplusRipper.class);
-  }
+//  /**
+//   * configurator for external deployment
+//   * @param application
+//   * @return
+//   */
+//  @Override
+//  protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+//    return application.sources(GplusRipper.class);
+//  }
 
 }

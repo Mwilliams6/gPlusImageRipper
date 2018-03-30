@@ -16,10 +16,10 @@
 
           <input id="urlPath" name="url" class="form-control input-sm" value="116749500979671626219"/>
           <button type="submit" id="bth-search"
-                    class="btn btn-primary btn-lg">Search
+                    class="btn btn-primary btn-sm btn-space">Search
           </button>
             <button type="submit" id="bth-cancel"
-                    class="btn btn-danger btn-lg btn-space">Cancel
+                    class="btn btn-danger btn-sm btn-space">Cancel
             </button>
        </form>
     </div>

@@ -3,6 +3,7 @@ package com.revolv3r.gplusimageripper;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.stream.Collectors.toList;
 
+import com.revolv3r.gplusimageripper.domain.GooglePlusAlbumItem;
 import com.revolv3r.gplusimageripper.service.GplusService;
 import com.revolv3r.gplusimageripper.util.CommonFunctions;
 import org.apache.logging.log4j.Logger;
@@ -10,7 +11,6 @@ import org.apache.logging.log4j.LogManager;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -18,16 +18,16 @@ import java.util.concurrent.TimeUnit;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.annotation.Resource;
 
-@RestController
+@Controller
 @SpringBootApplication
 public class GplusRipper extends SpringBootServletInitializer
 {
@@ -49,17 +49,19 @@ public class GplusRipper extends SpringBootServletInitializer
 	 * Initiates the grab process
 	 * @param input the google profile ID
 	 */
-	@RequestMapping(path = "initReq", method = RequestMethod.POST)
+	@RequestMapping(value = "initReq", method = RequestMethod.POST)
 	public ResponseEntity<?> get(@RequestParam String input) {
 		resetCounters();
 		//get album urls from profile
-		final Set<String> albumUrls = mGplusService.retrieveAlbumsFromProfile(input);
+		final List<GooglePlusAlbumItem> albumUrls = mGplusService.retrieveAlbumsFromProfile(input);
 		mLogger.debug(String.format("fatching %s albums.. Please Wait", albumUrls.size()));
+
+
 
     // Create the collection of futures.
     futureResults =
             albumUrls.stream()
-                    .map(albumPath -> supplyAsync(() -> mGplusService.retrieveImages(albumPath)))
+                    .map(albumPath -> supplyAsync(() -> mGplusService.retrieveImages("https://get.google.com/u/1/"+albumPath.getPageUrl())))
                     .collect(toList());
 		total = futureResults.size();
     return ResponseEntity.ok(total);

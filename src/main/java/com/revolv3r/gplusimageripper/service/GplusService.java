@@ -1,9 +1,10 @@
 package com.revolv3r.gplusimageripper.service;
 
+import com.revolv3r.gplusimageripper.domain.GooglePlusAlbumItem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Set;
+import java.util.List;
 
 public interface GplusService {
   Logger mLogger = LogManager.getLogger(GplusService.class);
@@ -13,7 +14,7 @@ public interface GplusService {
    * @param userId profile id
    * @return list of string album URLs
    */
-  Set<String> retrieveAlbumsFromProfile(String userId);
+  List<GooglePlusAlbumItem> retrieveAlbumsFromProfile(String userId);
 
   /**
    * Retrieve images from album URL

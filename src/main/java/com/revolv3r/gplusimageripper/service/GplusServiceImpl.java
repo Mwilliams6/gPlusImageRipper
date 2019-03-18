@@ -1,16 +1,22 @@
 package com.revolv3r.gplusimageripper.service;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
+import com.revolv3r.gplusimageripper.domain.GooglePlusAlbumItem;
+import com.revolv3r.gplusimageripper.domain.GooglePlusPhoto;
 import com.revolv3r.gplusimageripper.util.CommonFunctions;
+import com.revolv3r.gplusimageripper.dao.GPlusAlbumItemRepository;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,20 +30,21 @@ public class GplusServiceImpl implements GplusService {
   private static final String LIGHTBOX_TARGET_DIV_END = "</div>";
   private static final String LINEBREAK = "<br/>";
 
+  @Autowired
+  private GPlusAlbumItemRepository mGPlusAlbumItemRepository;
 
   @Override
-  public Set<String> retrieveAlbumsFromProfile(String userId)
+  public List<GooglePlusAlbumItem> retrieveAlbumsFromProfile(String userId)
   {
-    Set<String> result = new HashSet<>();
     try
     {
-      return getInitialAlbumPages(GOOGLE_PROFILE_BASE_URL+userId);
+      return getInitialAlbumPages("audreyAlbumHome.html");
     }
     catch (IllegalArgumentException e)
     {
       e.printStackTrace();
     }
-    return result;
+    return new ArrayList<>();
   }
 
   @Override
@@ -46,7 +53,7 @@ public class GplusServiceImpl implements GplusService {
     if (!cancelled)
     {
       try {
-        return getActualAlbumPage(CommonFunctions.correctAlbumUrl(passedValue));
+        return getActualAlbumPage(passedValue);
       }catch (IOException e)
       {
         e.printStackTrace();
@@ -61,23 +68,60 @@ public class GplusServiceImpl implements GplusService {
    * @param aPath the profile URL
    * @return a set of album path URLs
    */
-  private Set<String> getInitialAlbumPages(String aPath)
+  private List<GooglePlusAlbumItem> getInitialAlbumPages(String aPath)
   {
     try{
-      Set<String> albumList = new HashSet<>();
-      Document doc = Jsoup.connect(aPath).get();
+      URL urlPath = this.getClass().getClassLoader().getResource(aPath);
+      Document doc = Jsoup.parse(new File(urlPath.toURI()), "ISO-8859-1");
 
-      Elements matchingDivIds = doc.select("id");
+      Elements matchingDivIds = doc.select("div.NzRmxf");
 
-      mLogger.info(String.format("Album: %s, found %s images",
+      mLogger.info(String.format("Album: %s, found %s albums",
               doc.title(), matchingDivIds.size()));
 
+      List<GooglePlusAlbumItem> itemList = new ArrayList<>();
       for (Element individualImagePath : matchingDivIds) {
-        if (individualImagePath.toString().contains("albumid")){
-          albumList.add(individualImagePath.toString());
+        mLogger.info(individualImagePath.parent().toString());
+
+        String title = individualImagePath.child(0).attr("aria-label");
+        String thumbnail = individualImagePath.attr("data-bpu");
+        String pageUrl = individualImagePath.attr("data-link");
+        GooglePlusAlbumItem item = new GooglePlusAlbumItem(title, thumbnail, pageUrl);
+        itemList.add(item);
+        mGPlusAlbumItemRepository.save(item);
+
+        //get album images
+        Document album = Jsoup.connect("https://get.google.com/"+pageUrl.substring(2)+"?source=pwa").get();
+        Elements matchingImgIds = album.select("div.XmeTyb");
+
+        for (Element imagePath : matchingImgIds)
+        {
+
+          String photoTitle ="";
+          String photoThumbnail ="";
+          String thumbsrc = imagePath.child(0).attr("src");
+
+          GooglePlusPhoto photo = new GooglePlusPhoto(photoTitle, thumbsrc, "none");
+//
+//          File file = new File(thumbsrc);
+//          byte[] fullsize = new byte[(int) file.length()];
+//          try {
+//            FileInputStream fileInputStream = new FileInputStream(file);
+//            //convert file into array of bytes
+//            fileInputStream.read(fullsize);
+//            fileInputStream.close();
+//          } catch (Exception e) {
+//            e.printStackTrace();
+//          }
+
+          //photo.setmFullImage(fullsize);
+          photo.setmAlbum(item.getPk());
+
+          mGPlusAlbumItemRepository.save(item);
+          mLogger.info("===");
         }
       }
-      return albumList;
+      return itemList;
     }
     catch (Exception e) {
       e.printStackTrace();
